@@ -8,7 +8,7 @@ const extras = [
     role: "Director of Growth & Community",
     period: "Apr 2025 – Present",
     Icon: Users,
-    description: "Building a startup-like culture at UB — connecting developers, designers, and founders. Leading weekly showcases and growing the community.",
+    description: "Building a startup-like culture at UB, connecting developers, designers, and founders. Leading weekly showcases and growing the community.",
   },
   {
     org: "UB Data Analytics Club",

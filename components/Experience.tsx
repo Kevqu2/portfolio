@@ -23,7 +23,10 @@ const experience = [
     period: "Dec 2025 – Present",
     current: true,
     logo: "/logos/rally.png",
-    logoScale: 1.4,
+    logoFit: "contain" as const,
+    logoPadding: "2px",
+    logoBg: "#fff",
+    logoPosition: "-5px -5px",
     bullets: [
       "Building a full-stack iOS app with SwiftUI and a Go/Gin REST API, integrating live match stat tracking, AI-powered post-game recaps via OpenAI, and phone OTP authentication via Twilio — deployed on AWS ECS with Terraform.",
       "Engineered location-based match discovery using haversine distance queries in PostgreSQL and built a social system with friends, teams, and roster management across 60+ screens.",
@@ -59,13 +62,13 @@ function ExperienceItem({ item, index }: { item: (typeof experience)[0]; index: 
     >
       {/* Logo */}
       <div style={{ flexShrink: 0, paddingTop: "2px" }}>
-        <div style={{ width: "48px", height: "48px", borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)", background: "#111" }}>
+        <div style={{ width: "48px", height: "48px", borderRadius: "10px", overflow: "hidden", border: "1px solid var(--border)", background: item.logoBg ?? "#111" }}>
           <Image
             src={item.logo}
             alt={item.company}
             width={48}
             height={48}
-            style={{ objectFit: "cover", width: "100%", height: "100%", transform: `scale(${item.logoScale ?? 1})` }}
+            style={{ objectFit: item.logoFit ?? "cover", width: "100%", height: "100%", padding: item.logoPadding ?? "0", objectPosition: (item as any).logoPosition ?? "center" }}
           />
         </div>
       </div>

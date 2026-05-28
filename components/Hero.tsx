@@ -18,7 +18,7 @@ const socials = [
 ];
 
 const PREFIX = "20, ";
-const WORDS = ["volleyball enjoyer", "movie and show connoisseur", "gymrat?"];
+const WORDS = ["volleyball enjoyer 🏐", "movie and show connoisseur 📺", "gymrat?"];
 
 function Typewriter() {
   const [displayed, setDisplayed] = useState(PREFIX);
