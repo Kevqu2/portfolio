@@ -68,6 +68,13 @@ body {
   display: none;
 }
 
+/* Pond toggle only makes sense when side margins exist */
+@media (max-width: 900px) {
+  .nav-pond-toggle {
+    display: none !important;
+  }
+}
+
 /* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 639px) {
   .hero-layout {

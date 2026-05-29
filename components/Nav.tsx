@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Waves } from "lucide-react";
+import { usePond } from "./PondContext";
 
 const links = [
   { label: "Home", href: "#" },
@@ -15,6 +16,7 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const lastY = useRef(0);
   const locked = useRef(false);
+  const { on: pondOn, toggle: togglePond } = usePond();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,37 +67,61 @@ export default function Nav() {
       >
         <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--fg)" }}>Kevin Qu</span>
 
-        {/* Desktop links */}
-        <div className="nav-desktop-links" style={{ display: "flex", gap: "28px" }}>
-          {links.map(({ label, href }) => (
-            <a
-              key={label}
-              href={href}
-              onClick={handleLinkClick}
-              style={{ fontSize: "14px", color: "var(--muted)", textDecoration: "none", transition: "color 0.2s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
-            >
-              {label}
-            </a>
-          ))}
-        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "22px" }}>
+          {/* Desktop links */}
+          <div className="nav-desktop-links" style={{ display: "flex", gap: "28px" }}>
+            {links.map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                onClick={handleLinkClick}
+                style={{ fontSize: "14px", color: "var(--muted)", textDecoration: "none", transition: "color 0.2s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
+              >
+                {label}
+              </a>
+            ))}
+          </div>
 
-        {/* Hamburger button — mobile only */}
-        <button
-          className="nav-hamburger-btn"
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label="Toggle menu"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--muted)",
-            padding: "4px",
-          }}
-        >
-          {menuOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
+          {/* Subtle Pond-mode toggle (hidden on mobile — no margins there) */}
+          <button
+            className="nav-pond-toggle"
+            onClick={togglePond}
+            aria-label="Toggle Pond mode"
+            title="Pond"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              display: "inline-flex",
+              alignItems: "center",
+              color: pondOn ? "var(--accent)" : "#3a3a3a",
+              transition: "color 0.3s",
+            }}
+            onMouseEnter={(e) => { if (!pondOn) e.currentTarget.style.color = "var(--muted)"; }}
+            onMouseLeave={(e) => { if (!pondOn) e.currentTarget.style.color = "#3a3a3a"; }}
+          >
+            <Waves size={16} />
+          </button>
+
+          {/* Hamburger button — mobile only */}
+          <button
+            className="nav-hamburger-btn"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label="Toggle menu"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--muted)",
+              padding: "4px",
+            }}
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile dropdown */}
