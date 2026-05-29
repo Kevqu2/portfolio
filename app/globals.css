@@ -68,6 +68,18 @@ body {
   display: none;
 }
 
+/* Condensed 2-column project grid */
+.projects-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 639px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Pond toggle only makes sense when side margins exist */
 @media (max-width: 900px) {
   .nav-pond-toggle {
