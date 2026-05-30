@@ -23,7 +23,7 @@ const TECH_ICON: Record<string, IconCmp> = {
   "OpenAI": SiOpenai,
 };
 
-const FALLBACK_BG = "radial-gradient(120% 120% at 0% 0%, rgba(59,130,246,0.16), rgba(59,130,246,0.02) 50%, transparent 72%), linear-gradient(160deg, #17171c, #0c0c10)";
+const FALLBACK_BG = "radial-gradient(120% 120% at 0% 0%, rgba(226,85,46,0.18), rgba(226,85,46,0.03) 50%, transparent 72%), linear-gradient(160deg, #1a1512, #0c0a09)";
 
 const projects = [
   {
@@ -98,7 +98,7 @@ function ProjectCard({
         transition: `opacity 0.6s ease ${index * 90}ms, transform 0.6s ease ${index * 90}ms, border-color 0.2s`,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "rgba(59,130,246,0.4)";
+        e.currentTarget.style.borderColor = "rgba(226,85,46,0.45)";
         const img = e.currentTarget.querySelector("img");
         if (img) img.style.transform = "scale(1.05)";
       }}
@@ -143,7 +143,7 @@ function ProjectCard({
                 {Icon ? (
                   <Icon size={15} title={tech} />
                 ) : (
-                  <span style={{ display: "inline-flex", alignItems: "center", height: "18px", padding: "0 6px", fontSize: "9.5px", fontFamily: "monospace", borderRadius: "4px", color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.1)" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", height: "18px", padding: "0 6px", fontSize: "9.5px", fontFamily: "var(--font-mono)", borderRadius: "4px", color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.1)" }}>
                     {tech}
                   </span>
                 )}
@@ -209,7 +209,7 @@ function Lightbox({
       />
 
       {images.length > 1 && (
-        <span style={{ position: "absolute", bottom: "20px", left: "50%", transform: "translateX(-50%)", fontSize: "12px", fontFamily: "monospace", color: "rgba(255,255,255,0.8)", background: "rgba(0,0,0,0.5)", padding: "4px 10px", borderRadius: "6px" }}>
+        <span style={{ position: "absolute", bottom: "20px", left: "50%", transform: "translateX(-50%)", fontSize: "12px", fontFamily: "var(--font-mono)", color: "rgba(255,255,255,0.8)", background: "rgba(0,0,0,0.5)", padding: "4px 10px", borderRadius: "6px" }}>
           {index + 1} / {images.length}
         </span>
       )}
@@ -224,7 +224,11 @@ export default function Projects() {
   return (
     <section id="projects" style={{ paddingBottom: "64px" }}>
       <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease", marginBottom: "28px" }}>
-        <p style={{ fontSize: "13px", fontFamily: "monospace", color: "var(--accent)" }}>Projects</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--accent)" }}>02</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "0.04em", color: "var(--fg)" }}>Projects</span>
+          <span style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        </div>
       </div>
       <div className="projects-grid">
         {projects.map((p, i) => (

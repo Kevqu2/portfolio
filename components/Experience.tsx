@@ -1,5 +1,7 @@
 "use client";
+import { useState } from "react";
 import Image from "next/image";
+import { ChevronDown } from "lucide-react";
 import { useInView } from "@/hooks/useInView";
 
 const experience = [
@@ -48,6 +50,7 @@ const experience = [
 
 function ExperienceItem({ item, index }: { item: (typeof experience)[0]; index: number }) {
   const { ref, visible } = useInView();
+  const [open, setOpen] = useState(false);
 
   return (
     <div
@@ -75,30 +78,56 @@ function ExperienceItem({ item, index }: { item: (typeof experience)[0]; index: 
 
       {/* Content */}
       <div style={{ flex: 1 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-          <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--fg)" }}>{item.role}</span>
-          {item.current && (
-            <span style={{ position: "relative", display: "inline-flex", width: "10px", height: "10px" }}>
-              <span className="animate-ping" style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#22c55e", opacity: 0.6 }} />
-              <span style={{ position: "relative", display: "inline-flex", width: "10px", height: "10px", borderRadius: "50%", background: "#22c55e" }} />
-            </span>
-          )}
+        {/* Clickable header */}
+        <div
+          onClick={() => setOpen((o) => !o)}
+          role="button"
+          aria-expanded={open}
+          style={{ cursor: "pointer", userSelect: "none" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "4px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontWeight: 600, fontSize: "14px", color: "var(--fg)" }}>{item.role}</span>
+              {item.current && (
+                <span style={{ position: "relative", display: "inline-flex", width: "10px", height: "10px" }}>
+                  <span className="animate-ping" style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#22c55e", opacity: 0.6 }} />
+                  <span style={{ position: "relative", display: "inline-flex", width: "10px", height: "10px", borderRadius: "50%", background: "#22c55e" }} />
+                </span>
+              )}
+            </div>
+            <ChevronDown
+              size={16}
+              style={{ color: "var(--muted)", flexShrink: 0, transition: "transform 0.3s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "8px", fontSize: "13px", color: "var(--muted)", flexWrap: "wrap" }}>
+            <span>{item.company}</span>
+            <span>·</span>
+            <span>{item.location}</span>
+            <span>·</span>
+            <span>{item.period}</span>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "8px", fontSize: "13px", color: "var(--muted)", marginBottom: "10px", flexWrap: "wrap" }}>
-          <span>{item.company}</span>
-          <span>·</span>
-          <span>{item.location}</span>
-          <span>·</span>
-          <span>{item.period}</span>
+
+        {/* Collapsible bullets */}
+        <div
+          style={{
+            overflow: "hidden",
+            maxHeight: open ? "500px" : "0px",
+            opacity: open ? 1 : 0,
+            marginTop: open ? "12px" : "0px",
+            transition: "max-height 0.4s ease, opacity 0.3s ease, margin-top 0.3s ease",
+          }}
+        >
+          <ul style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {item.bullets.map((b, i) => (
+              <li key={i} style={{ display: "flex", gap: "10px", fontSize: "13px", lineHeight: 1.65, color: "var(--muted)" }}>
+                <span style={{ color: "var(--accent)", flexShrink: 0, marginTop: "1px" }}>—</span>
+                {b}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          {item.bullets.map((b, i) => (
-            <li key={i} style={{ display: "flex", gap: "10px", fontSize: "13px", lineHeight: 1.65, color: "var(--muted)" }}>
-              <span style={{ color: "var(--accent)", flexShrink: 0, marginTop: "1px" }}>—</span>
-              {b}
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
@@ -110,9 +139,13 @@ export default function Experience() {
   return (
     <section id="experience" style={{ paddingBottom: "64px" }}>
       <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease", marginBottom: "28px" }}>
-        <p style={{ fontSize: "13px", fontFamily: "monospace", color: "var(--accent)" }}>Experience</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--accent)" }}>01</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "0.04em", color: "var(--fg)" }}>Experience</span>
+          <span style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
         {experience.map((item, i) => (
           <ExperienceItem key={i} item={item} index={i} />
         ))}

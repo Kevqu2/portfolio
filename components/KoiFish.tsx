@@ -60,10 +60,10 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let pageH = document.documentElement.scrollHeight; // full document height (the "river" length)
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
       canvas.style.width = window.innerWidth + "px";
@@ -93,6 +93,8 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const ripples: { x: number; y: number; r: number; a: number; ang: number }[] = [];
     const bubbles: { x: number; y: number; r: number; a: number; vy: number; vx: number }[] = [];
     let lastBubble = 0;
+    const wakes: { x: number; y: number; r: number; a: number; ang: number }[] = [];
+    let lastWake = 0;
 
     // ===== immersive (pond) layer — top-down, both margins =====
     let immersiveAmt = 0;
@@ -113,11 +115,15 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const smallKoi = SIDES.flatMap((side) =>
       Array.from({ length: 8 }, (_, i) => {
         const seed = side * 13 + i * 3 + 1;
+        const depth = rnd(seed + 9); // 0 = near the surface, 1 = deep in the pond
         return {
           side, fx: 0.28 + rnd(seed) * 0.44, wy: (i + 0.5 + (rnd(seed + 1) - 0.5) * 0.8) / 8,
-          baseHeading: rnd(seed + 2) * Math.PI * 2, scale: 0.6 + rnd(seed + 4) * 0.45,
+          baseHeading: rnd(seed + 2) * Math.PI * 2,
+          scale: (0.58 + rnd(seed + 4) * 0.42) * (1 - depth * 0.45),
           phase: rnd(seed + 5) * Math.PI * 2, bobPhase: rnd(seed + 6) * Math.PI * 2,
-          turnRange: 0.4 + rnd(seed + 7) * 0.4, turnSpd: 0.1 + rnd(seed + 8) * 0.12,
+          turnRange: 0.4 + rnd(seed + 7) * 0.4,
+          turnSpd: (0.1 + rnd(seed + 8) * 0.12) * (1 - depth * 0.4),
+          depth,
           pattern: KOI_PATTERNS[(side * 3 + i) % KOI_PATTERNS.length],
         };
       })
@@ -159,7 +165,10 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
       })
     );
 
-    const petals: { x: number; y: number; vx: number; vy: number; r: number; rot: number; vr: number; a: number }[] = [];
+    const petals: { x: number; y: number; vx: number; vy: number; r: number; rot: number; vr: number; a: number; leaf: boolean }[] = [];
+    // a single dragonfly that occasionally skims across a margin
+    let dragonfly: { x: number; y: number; vx: number; vy: number; tx: number; ty: number; life: number; wing: number; m: { x: number; w: number } } | null = null;
+    let nextDragonfly = 10 + Math.random() * 12;
     let lastPetal = 0;
 
     // ===== detailed SVG sprites for the motionless decor =====
@@ -263,32 +272,75 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><linearGradient id="blg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3e7e30"/><stop offset="1" stop-color="#86ca60"/></linearGradient></defs>${s}</svg>`;
     };
 
-    const mkImg = (svg: string) => { const im = new Image(); im.src = svgURI(svg); return im; };
-    const sprPad = mkImg(padSVG());
-    const sprLotus = mkImg(lotusSVG());
+    // Sprites are rasterized ONCE to an offscreen bitmap on load, so per-frame
+    // drawing is a cheap canvas->canvas blit instead of re-rasterizing SVG.
+    type Spr = { c: HTMLCanvasElement | null };
+    const RASTER = 128;
+    const mkSpr = (svg: string): Spr => {
+      const spr: Spr = { c: null };
+      const im = new Image();
+      im.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = RASTER;
+        c.height = RASTER;
+        const cx = c.getContext("2d");
+        if (cx) { cx.drawImage(im, 0, 0, RASTER, RASTER); spr.c = c; }
+      };
+      im.src = svgURI(svg);
+      return spr;
+    };
+    const sprPad = mkSpr(padSVG());
+    const sprLotus = mkSpr(lotusSVG());
     const sprRock = [
-      mkImg(rockSVG(3, 0)), mkImg(rockSVG(8, 0)),
-      mkImg(rockSVG(5, 1)), mkImg(rockSVG(12, 1)),
-      mkImg(rockSVG(7, 2)), mkImg(rockSVG(14, 2)),
+      mkSpr(rockSVG(3, 0)), mkSpr(rockSVG(8, 0)),
+      mkSpr(rockSVG(5, 1)), mkSpr(rockSVG(12, 1)),
+      mkSpr(rockSVG(7, 2)), mkSpr(rockSVG(14, 2)),
     ];
-    const sprGrass = mkImg(grassSVG());
-    const sprPebble = [mkImg(pebbleSVG(2)), mkImg(pebbleSVG(6)), mkImg(pebbleSVG(9))];
-    const sprBamboo = mkImg(bambooSVG());
+    const sprGrass = mkSpr(grassSVG());
+    const sprPebble = [mkSpr(pebbleSVG(2)), mkSpr(pebbleSVG(6)), mkSpr(pebbleSVG(9))];
+    const sprBamboo = mkSpr(bambooSVG());
+
+    // pre-rendered soft shadow — cheap blit instead of ctx.filter="blur" per element
+    const shadowC = document.createElement("canvas");
+    shadowC.width = shadowC.height = 64;
+    {
+      const sc = shadowC.getContext("2d");
+      if (sc) {
+        const g = sc.createRadialGradient(32, 32, 1, 32, 32, 32);
+        g.addColorStop(0, "rgba(0,15,20,1)");
+        g.addColorStop(1, "rgba(0,15,20,0)");
+        sc.fillStyle = g;
+        sc.beginPath();
+        sc.arc(32, 32, 32, 0, Math.PI * 2);
+        sc.fill();
+      }
+    }
+    const drawShadow = (x: number, y: number, rx: number, ry: number, alpha: number) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(shadowC, x - rx, y - ry, rx * 2, ry * 2);
+      ctx.restore();
+    };
 
     // draw a sprite so its content radius (CR) maps to the requested radius R
-    const drawSprite = (img: HTMLImageElement, x: number, y: number, R: number, rot: number, alpha: number) => {
-      if (!img.complete || !img.naturalWidth) return;
+    const drawSprite = (spr: Spr, x: number, y: number, R: number, rot: number, alpha: number) => {
+      const c = spr.c;
+      if (!c) return;
       const size = R * 2 * (VB / (CR * 2));
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.translate(x, y);
       if (rot) ctx.rotate(rot);
-      ctx.drawImage(img, -size / 2, -size / 2, size, size);
+      ctx.drawImage(c, -size / 2, -size / 2, size, size);
       ctx.restore();
     };
 
     const onScroll = () => { targetScrollY = window.scrollY; };
     window.addEventListener("scroll", onScroll);
+
+    // keep pageH current without reading scrollHeight every frame (avoids reflow jank)
+    const ro = new ResizeObserver(() => { pageH = document.documentElement.scrollHeight; });
+    ro.observe(document.body);
 
     const marginCenterX = () => {
       const rightEdge = window.innerWidth / 2 + 700 / 2 + 24;
@@ -478,6 +530,27 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
         ctx.fillStyle = `rgba(26, 104, 104, ${0.32 * amt})`;
         ctx.fillRect(m.x, 0, m.w, H);
 
+        // ===== GOD RAYS — soft light shafts filtering through the water =====
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        for (let i = 0; i < 3; i++) {
+          const drift = ((rnd(side * 17 + i + 1) + time * 0.012) % 1.3) - 0.15;
+          const bx = m.x + drift * m.w;
+          const w = 38 + (i % 2) * 34;
+          const flick = 0.55 + 0.45 * Math.sin(time * 0.5 + i * 2.1);
+          ctx.save();
+          ctx.translate(bx, -50);
+          ctx.rotate(0.32);
+          const rg = ctx.createLinearGradient(0, 0, 0, H * 1.1);
+          rg.addColorStop(0, `rgba(186, 232, 236, ${0.05 * amt * flick})`);
+          rg.addColorStop(0.5, `rgba(150, 214, 224, ${0.025 * amt * flick})`);
+          rg.addColorStop(1, "rgba(150, 214, 224, 0)");
+          ctx.fillStyle = rg;
+          ctx.fillRect(-w / 2, 0, w, H * 1.25);
+          ctx.restore();
+        }
+        ctx.restore();
+
         // flowing caustic ribbons (glowing light on the water)
         ctx.save();
         ctx.shadowColor = `rgba(175, 232, 236, ${0.5 * amt})`;
@@ -504,14 +577,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
         // `seed` must be world-stable (NOT screen coords) so the rock keeps its
         // shape/rotation as it scrolls instead of re-randomizing every frame.
         const bankRock = (rx: number, ry: number, rr: number, into: number, seed: number) => {
-          ctx.save();
-          ctx.globalAlpha = amt;
-          ctx.filter = "blur(3px)";
-          ctx.beginPath();
-          ctx.ellipse(rx + into * 2, ry + 4, rr * 0.92, rr * 0.66, 0, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(0, 14, 20, 0.4)";
-          ctx.fill();
-          ctx.restore();
+          drawShadow(rx + into * 2, ry + 4, rr * 1.05, rr * 0.78, amt * 0.5);
           drawSprite(sprRock[Math.floor(rnd(seed) * 6) % 6], rx, ry, rr, rnd(seed + 1) * 6.28, amt);
         };
         for (const edge of EDGES) {
@@ -560,26 +626,26 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
               }
               if (rnd(base + n + 20) > 0.4) drawSprite(sprGrass, edgeX + into * (10 + rnd(base + n + 21) * 14), slotY + (rnd(base + n + 22) - 0.5) * 40, 13 + rnd(base + n + 23) * 12, Math.sin(time * 0.5 + n) * 0.05, amt * 0.95);
               // bamboo occasionally rises from an outcrop
-              if (rnd(base + n + 30) > 0.6 && sprBamboo.complete && sprBamboo.naturalWidth) {
+              if (rnd(base + n + 30) > 0.6 && sprBamboo.c) {
                 const bSize = 130;
                 ctx.save();
                 ctx.globalAlpha = amt;
                 ctx.translate(edgeX, slotY - extent * 0.3);
                 if (into < 0) ctx.scale(-1, 1);
                 ctx.rotate(Math.sin(time * 0.6 + n) * 0.04);
-                ctx.drawImage(sprBamboo, -0.1 * bSize, -bSize / 2, bSize, bSize);
+                ctx.drawImage(sprBamboo.c, -0.1 * bSize, -bSize / 2, bSize, bSize);
                 ctx.restore();
               }
             }
           }
         }
 
-        // ===== secondary koi (anchored in the river; you pass them by) =====
-        for (const k of smallKoi.filter((k) => k.side === side)) {
+        // ===== secondary koi at varied depths (deep drawn first, fainter) =====
+        for (const k of smallKoi.filter((k) => k.side === side).sort((a, b) => b.depth - a.depth)) {
           const x = m.x + (k.fx + Math.sin(time * 0.2 + k.bobPhase) * 0.02) * m.w;
           const y = k.wy * pageH - sY + Math.cos(time * 0.18 + k.bobPhase) * 6;
           if (y < -120 || y > H + 120) continue;
-          drawSmallKoi(k, x, y, amt * 0.95);
+          drawSmallKoi(k, x, y, amt * (0.95 - k.depth * 0.5));
         }
 
         // inner-edge depth shadow near the content "island"
@@ -617,14 +683,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
           const rot = lp.notch + Math.sin(time * 0.3 + lp.phase) * 0.12;
 
           // soft shadow on water
-          ctx.save();
-          ctx.globalAlpha = amt;
-          ctx.filter = "blur(4px)";
-          ctx.beginPath();
-          ctx.ellipse(x + 3, y + 4, r, r * 0.96, 0, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(0, 22, 26, 0.3)";
-          ctx.fill();
-          ctx.restore();
+          drawShadow(x + 3, y + 4, r * 1.15, r * 1.1, amt * 0.36);
 
           drawSprite(sprPad, x, y, r, rot, amt);
           if (lp.flower) {
@@ -672,38 +731,114 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
             x: m.x + Math.random() * m.w, y: -10,
             vx: (Math.random() - 0.5) * 0.3, vy: 0.25 + Math.random() * 0.3,
             r: 4 + Math.random() * 3.5, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.03, a: 0.9,
+            leaf: Math.random() < 0.26,
           });
         }
         lastPetal = time;
       }
       for (let i = petals.length - 1; i >= 0; i--) {
         const p = petals[i];
-        p.x += p.vx + Math.sin(time + p.y * 0.02) * 0.18;
+        p.x += p.vx + Math.sin(time + p.y * 0.02) * (p.leaf ? 0.3 : 0.18);
         p.y += p.vy;
-        p.rot += p.vr;
+        p.rot += p.vr * (p.leaf ? 1.8 : 1);
         if (p.y > H + 20) { petals.splice(i, 1); continue; }
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
-        // notched cherry-blossom petal
         const r = p.r;
-        ctx.beginPath();
-        ctx.moveTo(0, r);
-        ctx.bezierCurveTo(r, r * 0.3, r * 0.6, -r * 0.9, r * 0.13, -r);
-        ctx.lineTo(0, -r * 0.8);
-        ctx.lineTo(-r * 0.13, -r);
-        ctx.bezierCurveTo(-r * 0.6, -r * 0.9, -r, r * 0.3, 0, r);
-        ctx.closePath();
-        const pg = ctx.createLinearGradient(0, r, 0, -r);
-        pg.addColorStop(0, `rgba(244, 178, 200, ${p.a * amt})`);
-        pg.addColorStop(1, `rgba(252, 216, 228, ${p.a * amt})`);
-        ctx.fillStyle = pg;
-        ctx.fill();
-        ctx.strokeStyle = `rgba(228, 150, 178, ${p.a * 0.5 * amt})`;
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
+        if (p.leaf) {
+          // a small tumbling leaf
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r * 0.55, r * 1.15, 0, 0, Math.PI * 2);
+          const lg = ctx.createLinearGradient(0, -r, 0, r);
+          lg.addColorStop(0, `rgba(132, 168, 78, ${p.a * amt})`);
+          lg.addColorStop(1, `rgba(86, 124, 52, ${p.a * amt})`);
+          ctx.fillStyle = lg;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(0, -r * 1.05);
+          ctx.lineTo(0, r * 1.05);
+          ctx.strokeStyle = `rgba(60, 92, 40, ${p.a * 0.6 * amt})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        } else {
+          // notched cherry-blossom petal
+          ctx.beginPath();
+          ctx.moveTo(0, r);
+          ctx.bezierCurveTo(r, r * 0.3, r * 0.6, -r * 0.9, r * 0.13, -r);
+          ctx.lineTo(0, -r * 0.8);
+          ctx.lineTo(-r * 0.13, -r);
+          ctx.bezierCurveTo(-r * 0.6, -r * 0.9, -r, r * 0.3, 0, r);
+          ctx.closePath();
+          const pg = ctx.createLinearGradient(0, r, 0, -r);
+          pg.addColorStop(0, `rgba(244, 178, 200, ${p.a * amt})`);
+          pg.addColorStop(1, `rgba(252, 216, 228, ${p.a * amt})`);
+          ctx.fillStyle = pg;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(228, 150, 178, ${p.a * 0.5 * amt})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
         ctx.restore();
       }
+
+      // ===== DRAGONFLY — occasionally skims across a margin =====
+      if (!dragonfly && immersiveRef.current && time > nextDragonfly) {
+        const m = margins[Math.random() < 0.5 ? 0 : 1] || margins[0] || margins[1];
+        if (m) {
+          const startY = H * (0.2 + Math.random() * 0.5);
+          dragonfly = { x: m.x + Math.random() * m.w, y: startY, vx: 0, vy: 0, tx: m.x + Math.random() * m.w, ty: startY + (Math.random() - 0.5) * 120, life: 7, wing: 0, m };
+        }
+      }
+      if (dragonfly) {
+        const d = dragonfly;
+        d.life -= 0.016;
+        // re-target now and then for a darting path
+        if (Math.random() < 0.018) {
+          d.tx = d.m.x + Math.random() * d.m.w;
+          d.ty = H * (0.15 + Math.random() * 0.6);
+        }
+        d.vx += (d.tx - d.x) * 0.004;
+        d.vy += (d.ty - d.y) * 0.004;
+        d.vx *= 0.92;
+        d.vy *= 0.92;
+        d.x += d.vx;
+        d.y += d.vy;
+        d.wing += 0.9;
+        if (d.life <= 0) {
+          dragonfly = null;
+          nextDragonfly = time + 12 + Math.random() * 16;
+        } else {
+          const ang = Math.atan2(d.vy, d.vx);
+          const fade = Math.min(1, d.life) * Math.min(1, 7 - d.life) * amt;
+          ctx.save();
+          ctx.translate(d.x, d.y);
+          ctx.rotate(ang);
+          // body
+          ctx.beginPath();
+          ctx.moveTo(-9, 0);
+          ctx.lineTo(7, 0);
+          ctx.strokeStyle = `rgba(70, 130, 150, ${0.8 * fade})`;
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(8, 0, 1.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(60, 120, 140, ${0.85 * fade})`;
+          ctx.fill();
+          // 4 flickering wings
+          const beat = 0.5 + 0.5 * Math.abs(Math.sin(d.wing));
+          ctx.fillStyle = `rgba(200, 235, 240, ${0.3 * fade * beat})`;
+          for (const sx of [-1, 1] as const) {
+            for (const sy of [-1, 1] as const) {
+              ctx.beginPath();
+              ctx.ellipse(sx * 2, sy * 5 * beat, 8, 2.6, sy * 0.4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.restore();
+        }
+      }
+
       ctx.restore();
     };
 
@@ -997,7 +1132,6 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const frame = () => {
       time += 0.016;
       scrollY += (targetScrollY - scrollY) * 0.06;
-      pageH = document.documentElement.scrollHeight;
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
       const mx = marginCenterX();
@@ -1021,7 +1155,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
       loopBlend += ((idleTimer > 4 ? 1 : 0) - loopBlend) * 0.02;
       loopAngle += 0.016 * 0.6;
 
-      const sf = scrollY / Math.max(document.body.scrollHeight - window.innerHeight, 1);
+      const sf = scrollY / Math.max(pageH - window.innerHeight, 1);
       const baseY = 170 + sf * (window.innerHeight * 0.58);
 
       // normal swim target (snaking, energy-scaled amplitude)
@@ -1073,6 +1207,25 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
         ctx.stroke();
       }
 
+      // V-shaped wake trailing behind the koi's tail
+      const tail = joints[N - 1];
+      if (time - lastWake > 0.3) {
+        wakes.push({ x: tail.x, y: tail.y, r: 3, a: 0.2, ang: ang0 });
+        lastWake = time;
+      }
+      for (let i = wakes.length - 1; i >= 0; i--) {
+        const wk = wakes[i];
+        wk.r += 1.1;
+        wk.a -= 0.006;
+        if (wk.a <= 0) { wakes.splice(i, 1); continue; }
+        // rear-facing arc only — reads as a spreading wake behind the fish
+        ctx.beginPath();
+        ctx.ellipse(wk.x, wk.y, wk.r, wk.r * 0.55, wk.ang, Math.PI * 0.55, Math.PI * 1.45);
+        ctx.strokeStyle = `rgba(150, 200, 220, ${wk.a})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
       // rising bubbles from near the head/gills
       if (time - lastBubble > 0.45) {
         const src = joints[2];
@@ -1116,6 +1269,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", onScroll);
+      ro.disconnect();
     };
   }, []);
 

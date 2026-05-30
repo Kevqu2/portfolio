@@ -74,18 +74,34 @@ export default function Hero() {
   });
 
   return (
-    <section style={{ paddingTop: "96px", paddingBottom: "64px" }}>
-      <div className="hero-layout">
+    <section style={{ position: "relative", paddingTop: "96px", paddingBottom: "64px" }}>
+      {/* faint vermilion glow behind the name */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: "30px",
+          left: "-90px",
+          width: "440px",
+          height: "440px",
+          background: "radial-gradient(circle, rgba(226,85,46,0.13), rgba(226,85,46,0) 62%)",
+          filter: "blur(24px)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      <div className="hero-layout" style={{ position: "relative", zIndex: 1 }}>
         <div className="hero-text" style={{ flex: 1 }}>
           <h1
             style={{
               ...fadeIn(0),
-              fontSize: "clamp(36px, 5vw, 48px)",
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.1,
+              fontFamily: "var(--font-serif)",
+              fontSize: "clamp(44px, 6vw, 60px)",
+              fontWeight: 500,
+              letterSpacing: "-0.015em",
+              lineHeight: 1.02,
               color: "var(--fg)",
-              marginBottom: "14px",
+              marginBottom: "16px",
             }}
           >
             Kevin Qu

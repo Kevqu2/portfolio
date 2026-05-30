@@ -65,7 +65,7 @@ export default function Nav() {
           justifyContent: "space-between",
         }}
       >
-        <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--fg)" }}>Kevin Qu</span>
+        <span style={{ fontFamily: "var(--font-serif)", fontSize: "17px", fontWeight: 500, color: "var(--fg)" }}>Kevin Qu</span>
 
         <div style={{ display: "flex", alignItems: "center", gap: "22px" }}>
           {/* Desktop links */}

@@ -36,7 +36,11 @@ export default function Skills() {
   return (
     <section id="skills" style={{ paddingBottom: "64px" }}>
       <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease", marginBottom: "28px" }}>
-        <p style={{ fontSize: "13px", fontFamily: "monospace", color: "var(--accent)" }}>Skills</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--accent)" }}>03</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "0.04em", color: "var(--fg)" }}>Skills</span>
+          <span style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        </div>
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "center" }}>

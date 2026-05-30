@@ -36,7 +36,7 @@ function ExtraCard({ item, index }: { item: (typeof extras)[0]; index: number })
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "10px" }}>
-        <div style={{ padding: "7px", borderRadius: "7px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.12)", flexShrink: 0 }}>
+        <div style={{ padding: "7px", borderRadius: "7px", background: "rgba(226,85,46,0.1)", border: "1px solid rgba(226,85,46,0.16)", flexShrink: 0 }}>
           <Icon size={14} style={{ color: "var(--accent)" }} />
         </div>
         <div>
@@ -56,7 +56,11 @@ export default function Extras() {
   return (
     <section id="extracurriculars" style={{ paddingBottom: "64px" }}>
       <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease", marginBottom: "28px" }}>
-        <p style={{ fontSize: "13px", fontFamily: "monospace", color: "var(--accent)" }}>Extracurriculars</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--accent)" }}>04</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", letterSpacing: "0.04em", color: "var(--fg)" }}>Extracurriculars</span>
+          <span style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {extras.map((e, i) => (
