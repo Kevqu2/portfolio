@@ -9,7 +9,7 @@ const sans = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-sans", displ
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Kevin Qu",
+  title: "kevinqu.dev",
   description: "Software Engineer · CS @ University at Buffalo",
 };
 
