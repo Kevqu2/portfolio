@@ -132,7 +132,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const lilyPads = SIDES.flatMap((side) =>
       Array.from({ length: 20 }, (_, i) => {
         const seed = side * 21 + i * 5 + 2;
-        return { side, fx: 0.18 + rnd(seed) * 0.64, wy: (i + (rnd(seed + 1) - 0.5) * 0.95) / 20, r: 20 + rnd(seed + 2) * 24, phase: rnd(seed + 3) * 6.28, spd: 0.1 + rnd(seed + 4) * 0.1, notch: rnd(seed + 5) * 6.28, flower: i % 4 === 1 };
+        return { side, fx: 0.18 + rnd(seed) * 0.64, wy: (i + (rnd(seed + 1) - 0.5) * 0.95) / 20, r: 20 + rnd(seed + 2) * 24, phase: rnd(seed + 3) * 6.28, spd: 0.1 + rnd(seed + 4) * 0.1, notch: rnd(seed + 5) * 6.28, flower: i % 4 === 1, padV: Math.floor(rnd(seed + 6) * 5), lotusV: Math.floor(rnd(seed + 7) * 3) };
       })
     );
 
@@ -140,7 +140,29 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const pebbles = SIDES.flatMap((side) =>
       Array.from({ length: 16 }, (_, i) => {
         const seed = side * 51 + i * 9 + 5;
-        return { side, fx: 0.12 + rnd(seed) * 0.76, wy: (i + (rnd(seed + 1) - 0.5)) / 16, r: 26 + rnd(seed + 2) * 26, variant: i % 3 };
+        return { side, fx: 0.12 + rnd(seed) * 0.76, wy: (i + (rnd(seed + 1) - 0.5)) / 16, r: 26 + rnd(seed + 2) * 26, variant: i % 5 };
+      })
+    );
+
+    // dappled shade pools drifting near the banks (forest canopy overhead)
+    const shade = SIDES.flatMap((side) =>
+      Array.from({ length: 3 }, (_, i) => {
+        const seed = side * 71 + i * 13 + 8;
+        return { side, fx: rnd(seed) * 0.55, fy: rnd(seed + 1), r: 70 + rnd(seed + 2) * 90, phase: rnd(seed + 3) * 6.28, spd: 0.04 + rnd(seed + 4) * 0.05 };
+      })
+    );
+    // floating duckweed flecks collecting in calm spots
+    const duckweed = SIDES.flatMap((side) =>
+      Array.from({ length: 10 }, (_, i) => {
+        const seed = side * 81 + i * 7 + 9;
+        return { side, fx: 0.1 + rnd(seed) * 0.8, wy: (i + rnd(seed + 1)) / 10, count: 5 + Math.floor(rnd(seed + 2) * 6), spread: 8 + rnd(seed + 3) * 14, seed };
+      })
+    );
+    // a few leaves settled on the riverbed among the pebbles
+    const bottomLeaves = SIDES.flatMap((side) =>
+      Array.from({ length: 6 }, (_, i) => {
+        const seed = side * 91 + i * 11 + 10;
+        return { side, fx: 0.15 + rnd(seed) * 0.7, wy: (i + rnd(seed + 1)) / 6, r: 6 + rnd(seed + 2) * 5, rot: rnd(seed + 3) * 6.28, green: rnd(seed + 4) > 0.4 };
       })
     );
 
@@ -177,72 +199,134 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     const CR = 44;    // content radius within the viewBox
     const svgURI = (svg: string) => `data:image/svg+xml;charset=utf8,${encodeURIComponent(svg)}`;
 
-    const padSVG = () => {
-      const c = 50, r = CR, notch = 0.32, a0 = notch, a1 = Math.PI * 2 - notch, steps = 44;
+    const PAD_GREENS = [
+      ["#86c878", "#509a55", "#2c6238"],
+      ["#9ad08a", "#6aa84a", "#3a7030"],
+      ["#6fb86a", "#3f8a48", "#235028"],
+      ["#a6cf7e", "#74a248", "#4a6e2a"],
+    ];
+    const padSVG = (seed: number) => {
+      const c = 50;
+      const g = PAD_GREENS[Math.floor(rnd(seed) * PAD_GREENS.length)];
+      const notch = 0.26 + rnd(seed + 1) * 0.14;
+      const a0 = notch, a1 = Math.PI * 2 - notch, steps = 48;
+      // clean round pad (the recognizable lily-pad shape)
       let d = `M${c} ${c} `;
       for (let i = 0; i <= steps; i++) {
         const a = a0 + (a1 - a0) * (i / steps);
-        d += `L${(c + Math.cos(a) * r).toFixed(1)} ${(c + Math.sin(a) * r).toFixed(1)} `;
+        d += `L${(c + Math.cos(a) * CR).toFixed(1)} ${(c + Math.sin(a) * CR).toFixed(1)} `;
       }
       d += "Z";
+      const vc = 7 + Math.floor(rnd(seed + 4) * 3);
       let veins = "";
-      for (let v = 0; v < 8; v++) {
-        const a = a0 + 0.18 + (a1 - a0 - 0.36) * (v / 7);
-        const ex = c + Math.cos(a) * r * 0.9, ey = c + Math.sin(a) * r * 0.9;
-        const qx = c + Math.cos(a + 0.12) * r * 0.5, qy = c + Math.sin(a + 0.12) * r * 0.5;
-        veins += `<path d="M${c} ${c} Q${qx.toFixed(1)} ${qy.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="#1d3f25" stroke-width="1" opacity="0.4"/>`;
+      for (let v = 0; v < vc; v++) {
+        const a = a0 + 0.18 + (a1 - a0 - 0.36) * (v / (vc - 1));
+        const ex = c + Math.cos(a) * CR * 0.86, ey = c + Math.sin(a) * CR * 0.86;
+        const qx = c + Math.cos(a + 0.12) * CR * 0.5, qy = c + Math.sin(a + 0.12) * CR * 0.5;
+        veins += `<path d="M${c} ${c} Q${qx.toFixed(1)} ${qy.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="#1d3f25" stroke-width="0.9" opacity="0.36"/>`;
       }
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><radialGradient id="pg" cx="40%" cy="36%" r="64%"><stop offset="0%" stop-color="#80c473"/><stop offset="55%" stop-color="#4e9a55"/><stop offset="100%" stop-color="#2b6036"/></radialGradient></defs><path d="${d}" fill="url(#pg)" stroke="#7c4a2b" stroke-width="2.2"/>${veins}<ellipse cx="38" cy="36" rx="15" ry="7" fill="#aed694" opacity="0.4" transform="rotate(-35 38 36)"/></svg>`;
+      let drops = "";
+      for (let k = 0; k < 2; k++) {
+        const a = rnd(seed + 20 + k) * 6.28, dist = rnd(seed + 21 + k) * CR * 0.6;
+        drops += `<circle cx="${(c + Math.cos(a) * dist).toFixed(1)}" cy="${(c + Math.sin(a) * dist).toFixed(1)}" r="${(1.3 + rnd(seed + 22 + k) * 1.3).toFixed(1)}" fill="rgba(220,245,225,0.38)"/>`;
+      }
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><radialGradient id="pg${seed}" cx="40%" cy="36%" r="66%"><stop offset="0%" stop-color="${g[0]}"/><stop offset="55%" stop-color="${g[1]}"/><stop offset="100%" stop-color="${g[2]}"/></radialGradient></defs><path d="${d}" fill="url(#pg${seed})" stroke="#6a4326" stroke-width="2.3"/>${veins}<ellipse cx="38" cy="36" rx="14" ry="6.5" fill="#cde8a8" opacity="0.32" transform="rotate(-35 38 36)"/>${drops}</svg>`;
     };
 
-    const lotusSVG = () => {
+    const LOTUS_COLORS = [
+      { o1: "#e78eae", o2: "#f6c5d6", i1: "#ee9eba", i2: "#fad2e0", st: "#ce7896" }, // pink
+      { o1: "#ecd2dc", o2: "#fdf2f6", i1: "#f0dae2", i2: "#fff6f9", st: "#dcb8c4" }, // white
+      { o1: "#e297bb", o2: "#f7cbe0", i1: "#eaa8c8", i2: "#fbdaec", st: "#cf7aa2" }, // rose
+    ];
+    const lotusSVG = (seed: number) => {
+      const col = LOTUS_COLORS[Math.floor(rnd(seed) * LOTUS_COLORS.length)];
+      const outer = 7 + Math.floor(rnd(seed + 1) * 3); // 7–9 petals
+      const inner = outer - 2;
       let petalsStr = "";
       const ring = (count: number, len: number, wid: number, rot: number, grad: string) => {
         for (let i = 0; i < count; i++) {
           const ang = rot + (i * 360) / count;
-          petalsStr += `<path d="M0 0 Q${wid} ${-len * 0.55} 0 ${-len} Q${-wid} ${-len * 0.55} 0 0 Z" fill="url(#${grad})" stroke="#ce7896" stroke-width="0.5" transform="rotate(${ang.toFixed(1)})"/>`;
+          petalsStr += `<path d="M0 0 Q${wid} ${-len * 0.55} 0 ${-len} Q${-wid} ${-len * 0.55} 0 0 Z" fill="url(#${grad})" stroke="${col.st}" stroke-width="0.5" transform="rotate(${ang.toFixed(1)})"/>`;
         }
       };
-      ring(8, 42, 13, 0, "lo1");
-      ring(6, 29, 10, 24, "lo2");
+      ring(outer, 42, 13, 0, "lo1" + seed);
+      ring(inner, 29, 10, 24, "lo2" + seed);
       let dots = "";
       for (let d = 0; d < 7; d++) { const a = (d * 2 * Math.PI) / 7; dots += `<circle cx="${(Math.cos(a) * 6).toFixed(1)}" cy="${(Math.sin(a) * 6).toFixed(1)}" r="2" fill="#d6962b"/>`; }
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><linearGradient id="lo1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e78eae"/><stop offset="1" stop-color="#f6c5d6"/></linearGradient><linearGradient id="lo2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ee9eba"/><stop offset="1" stop-color="#fad2e0"/></linearGradient></defs><g transform="translate(50 50)">${petalsStr}<circle r="9" fill="#f0ca60"/>${dots}</g></svg>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><linearGradient id="lo1${seed}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${col.o1}"/><stop offset="1" stop-color="${col.o2}"/></linearGradient><linearGradient id="lo2${seed}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${col.i1}"/><stop offset="1" stop-color="${col.i2}"/></linearGradient></defs><g transform="translate(50 50)">${petalsStr}<circle r="9" fill="#f0ca60"/>${dots}</g></svg>`;
     };
 
     const ROCK_PALETTES = [
-      { a: "#8a808e", b: "#625a68", c: "#3a3442", line: "#231d28", hi: "#b6aebc" }, // cool gray
-      { a: "#7c7a82", b: "#56545e", c: "#33323a", line: "#1f1e26", hi: "#aab0b6" }, // dark slate
-      { a: "#baa67e", b: "#8c794f", c: "#5c4d30", line: "#3a3018", hi: "#d8c79c" }, // warm sandstone
+      { a: "#9a90a0", b: "#6a6270", c: "#39333f", line: "#221c28", hi: "#c4becc", moss: "#5a7a44" }, // cool gray
+      { a: "#8a8890", b: "#5c5a64", c: "#322f39", line: "#1d1c24", hi: "#b6bac0", moss: "#587038" }, // dark slate
+      { a: "#c8b48a", b: "#94804f", c: "#5a4b2e", line: "#382e18", hi: "#e4d4aa", moss: "#6a7a3a" }, // sandstone
+      { a: "#8aa078", b: "#5e7848", c: "#3a4e2c", line: "#26331a", hi: "#b0c696", moss: "#6f8a48" }, // mossy green
+      { a: "#bc9a7a", b: "#8a6648", c: "#523e2a", line: "#322618", hi: "#dabe9a", moss: "#6a7438" }, // brown ochre
     ];
     const rockSVG = (seed: number, pal = 0) => {
-      const c = 50, n = 10, P = ROCK_PALETTES[pal];
+      const c = 50, n = 12, P = ROCK_PALETTES[pal % ROCK_PALETTES.length];
       const pts: Pt[] = [];
       for (let k = 0; k < n; k++) {
         const a = (k / n) * Math.PI * 2;
         const rr = CR * (0.74 + rnd(seed * 7 + k) * 0.4);
-        pts.push({ x: c + Math.cos(a) * rr, y: c + Math.sin(a) * rr * 0.82 });
+        pts.push({ x: c + Math.cos(a) * rr, y: c + Math.sin(a) * rr * 0.84 });
       }
       let d = `M${((pts[n - 1].x + pts[0].x) / 2).toFixed(1)} ${((pts[n - 1].y + pts[0].y) / 2).toFixed(1)} `;
       for (let k = 0; k < n; k++) { const p = pts[k], nx = pts[(k + 1) % n]; d += `Q${p.x.toFixed(1)} ${p.y.toFixed(1)} ${((p.x + nx.x) / 2).toFixed(1)} ${((p.y + nx.y) / 2).toFixed(1)} `; }
       d += "Z";
+
+      // mottling — soft light/dark tonal blotches
+      let tex = "";
+      for (let t = 0; t < 7; t++) {
+        const a = rnd(seed * 13 + t) * 6.28, dist = rnd(seed * 13 + t + 1) * CR * 0.7;
+        const bx = c + Math.cos(a) * dist, by = c + Math.sin(a) * dist * 0.84;
+        const br = 4 + rnd(seed * 13 + t + 2) * 9;
+        tex += `<ellipse cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" rx="${br.toFixed(1)}" ry="${(br * 0.68).toFixed(1)}" fill="${t % 2 ? "rgba(255,250,245,0.1)" : "rgba(18,14,22,0.16)"}"/>`;
+      }
+      // fine speckle
+      for (let s = 0; s < 16; s++) {
+        const a = rnd(seed * 19 + s) * 6.28, dist = rnd(seed * 19 + s + 1) * CR * 0.82;
+        tex += `<circle cx="${(c + Math.cos(a) * dist).toFixed(1)}" cy="${(c + Math.sin(a) * dist * 0.84).toFixed(1)}" r="${(0.5 + rnd(s + seed) * 0.8).toFixed(1)}" fill="${rnd(s + seed) > 0.5 ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.2)"}"/>`;
+      }
+      // moss as soft patches on the sunlit top
       let moss = "";
-      for (let mo = 0; mo < 5; mo++) { const a = rnd(seed * 11 + mo) * 6.28, mr = rnd(seed * 11 + mo + 1) * CR * 0.6; moss += `<circle cx="${(c + Math.cos(a) * mr).toFixed(1)}" cy="${(c + Math.sin(a) * mr * 0.8 - 4).toFixed(1)}" r="${(1.4 + rnd(mo) * 1.8).toFixed(1)}" fill="#4c7838" opacity="0.45"/>`; }
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><linearGradient id="rg${seed}_${pal}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${P.a}"/><stop offset="0.5" stop-color="${P.b}"/><stop offset="1" stop-color="${P.c}"/></linearGradient></defs><path d="${d}" fill="url(#rg${seed}_${pal})" stroke="${P.line}" stroke-width="1.4"/><path d="M${(c - CR * 0.3).toFixed(1)} ${(c - CR * 0.2).toFixed(1)} L${(c + CR * 0.1).toFixed(1)} ${(c + CR * 0.3).toFixed(1)} L${(c + CR * 0.42).toFixed(1)} ${(c + CR * 0.05).toFixed(1)}" fill="none" stroke="${P.line}" stroke-width="0.9" opacity="0.5"/><ellipse cx="${(c - CR * 0.3).toFixed(1)}" cy="${(c - CR * 0.3).toFixed(1)}" rx="${(CR * 0.34).toFixed(1)}" ry="${(CR * 0.2).toFixed(1)}" fill="${P.hi}" opacity="0.3"/>${moss}</svg>`;
+      for (let mo = 0; mo < 3; mo++) {
+        const a = -1.3 + rnd(seed * 23 + mo) * 2.6;
+        const dist = (0.2 + rnd(seed * 23 + mo + 1) * 0.5) * CR;
+        const mx = c + Math.cos(a) * dist, my = c + Math.sin(a) * dist * 0.84 - CR * 0.12;
+        const mr = 5 + rnd(seed * 23 + mo + 2) * 7;
+        moss += `<ellipse cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" rx="${mr.toFixed(1)}" ry="${(mr * 0.66).toFixed(1)}" fill="${P.moss}" opacity="0.36"/>`;
+        moss += `<ellipse cx="${(mx + 2).toFixed(1)}" cy="${(my - 1).toFixed(1)}" rx="${(mr * 0.6).toFixed(1)}" ry="${(mr * 0.42).toFixed(1)}" fill="${P.moss}" opacity="0.3"/>`;
+      }
+      const crack = `<path d="M${(c - CR * 0.3).toFixed(1)} ${(c - CR * 0.2).toFixed(1)} L${(c + CR * 0.08).toFixed(1)} ${(c + CR * 0.26).toFixed(1)} L${(c + CR * 0.4).toFixed(1)} ${(c + CR * 0.04).toFixed(1)}" fill="none" stroke="${P.line}" stroke-width="0.8" opacity="0.4"/>`;
+      // wet specular glint near the lit top
+      const gx = c - CR * 0.28, gy = c - CR * 0.3;
+      const glint = `<ellipse cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" rx="${(CR * 0.17).toFixed(1)}" ry="${(CR * 0.09).toFixed(1)}" fill="rgba(255,255,255,0.42)" transform="rotate(-30 ${gx.toFixed(1)} ${gy.toFixed(1)})"/>`;
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}">`
+        + `<defs>`
+        + `<radialGradient id="rg${seed}_${pal}" cx="42%" cy="38%" r="64%"><stop offset="0" stop-color="${P.hi}"/><stop offset="0.42" stop-color="${P.a}"/><stop offset="0.8" stop-color="${P.b}"/><stop offset="1" stop-color="${P.c}"/></radialGradient>`
+        + `<clipPath id="rc${seed}_${pal}"><path d="${d}"/></clipPath>`
+        + `</defs>`
+        + `<path d="${d}" fill="url(#rg${seed}_${pal})" stroke="${P.line}" stroke-width="1.6"/>`
+        + `<g clip-path="url(#rc${seed}_${pal})">${tex}${moss}${crack}${glint}</g>`
+        + `</svg>`;
     };
 
-    const grassSVG = () => {
+    const grassSVG = (seed: number) => {
+      const n = 9 + Math.floor(rnd(seed) * 5);
       let blades = "";
-      const n = 11;
       for (let b = 0; b < n; b++) {
-        const a = (b / n) * Math.PI * 2;
-        const len = CR * (0.7 + (b % 3) * 0.18);
-        const px = -Math.sin(a), py = Math.cos(a), wide = 2.6;
-        const tipx = Math.cos(a) * len, tipy = Math.sin(a) * len;
+        const a = (b / n) * Math.PI * 2 + (rnd(seed * 7 + b) - 0.5) * 0.3;
+        const len = CR * (0.6 + rnd(seed * 5 + b + 1) * 0.42);
+        const px = -Math.sin(a), py = Math.cos(a), wide = 2.4;
+        const curl = (rnd(seed * 9 + b + 2) - 0.5) * 0.45;
+        const tipx = Math.cos(a) * len + px * curl * len, tipy = Math.sin(a) * len + py * curl * len;
         const mx = Math.cos(a) * len * 0.5, my = Math.sin(a) * len * 0.5;
-        blades += `<path d="M${(px * wide).toFixed(1)} ${(py * wide).toFixed(1)} Q${(mx + px * 1.2).toFixed(1)} ${(my + py * 1.2).toFixed(1)} ${tipx.toFixed(1)} ${tipy.toFixed(1)} Q${(mx - px * 1.2).toFixed(1)} ${(my - py * 1.2).toFixed(1)} ${(-px * wide).toFixed(1)} ${(-py * wide).toFixed(1)} Z" fill="url(#gg)"/>`;
+        blades += `<path d="M${(px * wide).toFixed(1)} ${(py * wide).toFixed(1)} Q${(mx + px * 1.2).toFixed(1)} ${(my + py * 1.2).toFixed(1)} ${tipx.toFixed(1)} ${tipy.toFixed(1)} Q${(mx - px * 1.2).toFixed(1)} ${(my - py * 1.2).toFixed(1)} ${(-px * wide).toFixed(1)} ${(-py * wide).toFixed(1)} Z" fill="url(#gg${seed})"/>`;
       }
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><linearGradient id="gg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#24501f"/><stop offset="1" stop-color="#5aab48"/></linearGradient></defs><g transform="translate(50 50)">${blades}</g></svg>`;
+      // radial gradient: dark at the base (center), light at the tips (outward)
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${VB}" height="${VB}" viewBox="0 0 ${VB} ${VB}"><defs><radialGradient id="gg${seed}" cx="50%" cy="50%" r="55%"><stop offset="0" stop-color="#234f1d"/><stop offset="1" stop-color="#64b650"/></radialGradient></defs><g transform="translate(50 50)">${blades}</g></svg>`;
     };
 
     // a bed of submerged cobbles (seen through clear water)
@@ -275,7 +359,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
     // Sprites are rasterized ONCE to an offscreen bitmap on load, so per-frame
     // drawing is a cheap canvas->canvas blit instead of re-rasterizing SVG.
     type Spr = { c: HTMLCanvasElement | null };
-    const RASTER = 128;
+    const RASTER = 192; // higher raster keeps large boulders crisp when scaled up
     const mkSpr = (svg: string): Spr => {
       const spr: Spr = { c: null };
       const im = new Image();
@@ -289,15 +373,18 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
       im.src = svgURI(svg);
       return spr;
     };
-    const sprPad = mkSpr(padSVG());
-    const sprLotus = mkSpr(lotusSVG());
+    // multiple seeded variants per decor type so the pond never looks tiled
+    const sprPad = Array.from({ length: 5 }, (_, i) => mkSpr(padSVG(i * 4 + 1)));
+    const sprLotus = Array.from({ length: 3 }, (_, i) => mkSpr(lotusSVG(i * 5 + 1)));
     const sprRock = [
       mkSpr(rockSVG(3, 0)), mkSpr(rockSVG(8, 0)),
       mkSpr(rockSVG(5, 1)), mkSpr(rockSVG(12, 1)),
       mkSpr(rockSVG(7, 2)), mkSpr(rockSVG(14, 2)),
+      mkSpr(rockSVG(9, 3)), mkSpr(rockSVG(16, 3)),
+      mkSpr(rockSVG(11, 4)), mkSpr(rockSVG(18, 4)),
     ];
-    const sprGrass = mkSpr(grassSVG());
-    const sprPebble = [mkSpr(pebbleSVG(2)), mkSpr(pebbleSVG(6)), mkSpr(pebbleSVG(9))];
+    const sprGrass = Array.from({ length: 4 }, (_, i) => mkSpr(grassSVG(i * 6 + 1)));
+    const sprPebble = Array.from({ length: 5 }, (_, i) => mkSpr(pebbleSVG(i * 3 + 2)));
     const sprBamboo = mkSpr(bambooSVG());
 
     // pre-rendered soft shadow — cheap blit instead of ctx.filter="blur" per element
@@ -526,9 +613,51 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
           if (y < -160 || y > H + 160) continue;
           drawSprite(sprPebble[pb.variant], x, y, pb.r, 0, amt * 0.4);
         }
-        // a faint water film over the bed so it reads as "under" the surface
-        ctx.fillStyle = `rgba(26, 104, 104, ${0.32 * amt})`;
-        ctx.fillRect(m.x, 0, m.w, H);
+        // leaves settled on the bed among the pebbles
+        for (const bl of bottomLeaves.filter((l) => l.side === side)) {
+          const x = m.x + bl.fx * m.w, y = bl.wy * pageH - sY;
+          if (y < -40 || y > H + 40) continue;
+          ctx.save();
+          ctx.globalAlpha = amt * 0.5;
+          ctx.translate(x, y);
+          ctx.rotate(bl.rot);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, bl.r * 0.5, bl.r * 1.05, 0, 0, Math.PI * 2);
+          ctx.fillStyle = bl.green ? "#46603a" : "#785c30";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(0, -bl.r);
+          ctx.lineTo(0, bl.r);
+          ctx.strokeStyle = "rgba(40,55,30,0.55)";
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // ===== DEPTH — clear/shallow at the bank, deep teal toward the channel =====
+        {
+          const outerX = side === 0 ? m.x : m.x + m.w;
+          const innerX = side === 0 ? m.x + m.w : m.x;
+          const dg = ctx.createLinearGradient(outerX, 0, innerX, 0);
+          dg.addColorStop(0, `rgba(20, 86, 90, ${0.08 * amt})`);
+          dg.addColorStop(0.5, `rgba(16, 72, 80, ${0.34 * amt})`);
+          dg.addColorStop(1, `rgba(8, 46, 54, ${0.62 * amt})`);
+          ctx.fillStyle = dg;
+          ctx.fillRect(m.x, 0, m.w, H);
+        }
+
+        // ===== DAPPLED SHADE — cool pools under the overhanging canopy =====
+        for (const sh of shade.filter((s) => s.side === side)) {
+          const outerX = side === 0 ? m.x : m.x + m.w;
+          const dir = side === 0 ? 1 : -1;
+          const x = outerX + dir * (sh.fx + Math.sin(time * sh.spd + sh.phase) * 0.06) * m.w;
+          const y = (sh.fy + Math.cos(time * sh.spd * 0.9 + sh.phase) * 0.05) * H;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, sh.r);
+          g.addColorStop(0, `rgba(4, 30, 34, ${0.22 * amt})`);
+          g.addColorStop(1, "rgba(4, 30, 34, 0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(m.x, 0, m.w, H);
+        }
 
         // ===== GOD RAYS — soft light shafts filtering through the water =====
         ctx.save();
@@ -578,7 +707,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
         // shape/rotation as it scrolls instead of re-randomizing every frame.
         const bankRock = (rx: number, ry: number, rr: number, into: number, seed: number) => {
           drawShadow(rx + into * 2, ry + 4, rr * 1.05, rr * 0.78, amt * 0.5);
-          drawSprite(sprRock[Math.floor(rnd(seed) * 6) % 6], rx, ry, rr, rnd(seed + 1) * 6.28, amt);
+          drawSprite(sprRock[Math.floor(rnd(seed) * sprRock.length) % sprRock.length], rx, ry, rr, (rnd(seed + 1) - 0.5) * 0.5, amt);
         };
         for (const edge of EDGES) {
           const edgeX = edge === 0
@@ -604,7 +733,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
               const cnt = 1 + Math.floor(rnd(base + n + 3) * 3);
               for (let g = 0; g < cnt; g++) {
                 const gy = slotY + (rnd(base + n * 3 + g) - 0.5) * 46;
-                drawSprite(sprGrass, edgeX + into * (8 + rnd(base + n * 3 + g + 1) * 16), gy, 12 + rnd(base + n * 3 + g + 2) * 12, Math.sin(time * 0.5 + n + g) * 0.05, amt * 0.95);
+                drawSprite(sprGrass[Math.floor(rnd(base + n * 3 + g + 4) * 4)], edgeX + into * (8 + rnd(base + n * 3 + g + 1) * 16), gy, 12 + rnd(base + n * 3 + g + 2) * 12, Math.sin(time * 0.5 + n + g) * 0.05, amt * 0.95);
               }
             } else if (t === 3) {
               // a big boulder jutting into the water + a couple at its base
@@ -613,7 +742,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
               for (let s = 0; s < 2; s++) {
                 bankRock(edgeX + into * (8 + rnd(base + n + s + 9) * 16), slotY + (s ? 30 : -32) + (rnd(base + n + s) - 0.5) * 18, 12 + rnd(base + n + s + 1) * 10, into, base + n * 17 + 820 + s * 11);
               }
-              if (rnd(base + n + 12) > 0.5) drawSprite(sprGrass, edgeX + into * 14, slotY + rr * 0.4, 14, Math.sin(time * 0.5 + n) * 0.05, amt * 0.95);
+              if (rnd(base + n + 12) > 0.5) drawSprite(sprGrass[Math.floor(rnd(base + n + 13) * 4)], edgeX + into * 14, slotY + rr * 0.4, 14, Math.sin(time * 0.5 + n) * 0.05, amt * 0.95);
             } else {
               // a rocky outcrop — a tight clump of varied rocks
               const count = 3 + Math.floor(rnd(base + n + 7) * 5);
@@ -624,7 +753,7 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
                 const rr = 12 + rnd(base + n * 5 + k + 2) * 22;
                 bankRock(edgeX + dx, slotY + dy, rr, into, base + n * 31 + k * 7 + 500);
               }
-              if (rnd(base + n + 20) > 0.4) drawSprite(sprGrass, edgeX + into * (10 + rnd(base + n + 21) * 14), slotY + (rnd(base + n + 22) - 0.5) * 40, 13 + rnd(base + n + 23) * 12, Math.sin(time * 0.5 + n) * 0.05, amt * 0.95);
+              if (rnd(base + n + 20) > 0.4) drawSprite(sprGrass[Math.floor(rnd(base + n + 24) * 4)], edgeX + into * (10 + rnd(base + n + 21) * 14), slotY + (rnd(base + n + 22) - 0.5) * 40, 13 + rnd(base + n + 23) * 12, Math.sin(time * 0.5 + n) * 0.05, amt * 0.95);
               // bamboo occasionally rises from an outcrop
               if (rnd(base + n + 30) > 0.6 && sprBamboo.c) {
                 const bSize = 130;
@@ -641,21 +770,15 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
         }
 
         // ===== secondary koi at varied depths (deep drawn first, fainter) =====
+        // each casts a soft shadow on the bed, offset & softened by its depth
         for (const k of smallKoi.filter((k) => k.side === side).sort((a, b) => b.depth - a.depth)) {
           const x = m.x + (k.fx + Math.sin(time * 0.2 + k.bobPhase) * 0.02) * m.w;
           const y = k.wy * pageH - sY + Math.cos(time * 0.18 + k.bobPhase) * 6;
           if (y < -120 || y > H + 120) continue;
+          const off = (0.25 + k.depth) * 14;
+          drawShadow(x + off, y + off * 1.1, 30 * k.scale, 13 * k.scale, amt * (0.3 - k.depth * 0.12));
           drawSmallKoi(k, x, y, amt * (0.95 - k.depth * 0.5));
         }
-
-        // inner-edge depth shadow near the content "island"
-        const innerX = side === 0 ? m.x + m.w : m.x;
-        const dir = side === 0 ? -1 : 1;
-        const sg = ctx.createLinearGradient(innerX, 0, innerX + dir * 55, 0);
-        sg.addColorStop(0, `rgba(4, 22, 28, ${0.5 * amt})`);
-        sg.addColorStop(1, "rgba(4, 22, 28, 0)");
-        ctx.fillStyle = sg;
-        ctx.fillRect(m.x, 0, m.w, H);
 
         ctx.restore();
       });
@@ -685,9 +808,9 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
           // soft shadow on water
           drawShadow(x + 3, y + 4, r * 1.15, r * 1.1, amt * 0.36);
 
-          drawSprite(sprPad, x, y, r, rot, amt);
+          drawSprite(sprPad[lp.padV], x, y, r, rot, amt);
           if (lp.flower) {
-            drawSprite(sprLotus, x, y, r * 0.5, Math.sin(time * 0.5 + lp.phase) * 0.08, amt);
+            drawSprite(sprLotus[lp.lotusV], x, y, r * 0.5, Math.sin(time * 0.5 + lp.phase) * 0.08, amt);
           }
         }
 
@@ -715,6 +838,21 @@ export default function KoiFish({ immersive = false }: { immersive?: boolean }) 
           ctx.fill();
         }
         ctx.restore();
+
+        // ===== DUCKWEED — tiny green flecks floating in calm spots =====
+        for (const dw of duckweed.filter((d) => d.side === side)) {
+          const cx2 = m.x + dw.fx * m.w, cy2 = dw.wy * pageH - sY;
+          if (cy2 < -30 || cy2 > H + 30) continue;
+          for (let k = 0; k < dw.count; k++) {
+            const a = rnd(dw.seed + k) * 6.28, dist = rnd(dw.seed + k + 1) * dw.spread;
+            const fx2 = cx2 + Math.cos(a) * dist + Math.sin(time * 0.3 + k) * 1.2;
+            const fy2 = cy2 + Math.sin(a) * dist;
+            ctx.beginPath();
+            ctx.arc(fx2, fy2, 1.3 + rnd(dw.seed + k + 2) * 1.3, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(108, 158, 64, ${0.68 * amt})`;
+            ctx.fill();
+          }
+        }
 
         ctx.restore();
       });
