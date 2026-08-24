@@ -6,6 +6,21 @@ import { useInView } from "@/hooks/useInView";
 
 const experience = [
   {
+    role: "Software Engineer",
+    company: "OneAuris",
+    location: "New York, NY",
+    period: "May 2026 – Present",
+    current: true,
+    logo: "/logos/oneauris.png",
+    logoFit: "contain" as const,
+    logoPadding: "5px",
+    logoBg: "#fff",
+    bullets: [
+      "Built and shipped a production multi-tenant, HIPAA-compliant AI legal-document-review platform for law firms, ingesting medical-legal records up to 3,500+ pages — Next.js, TypeScript, AWS Bedrock (Claude), Aurora PostgreSQL, and Cloudflare R2, deployed on ECS with blue/green CodeDeploy.",
+      "Engineered an AI ingestion pipeline that OCRs scanned and handwritten records, auto-classifies documents, and extracts structured medical fields — diagnoses, injuries, and treatment timelines — via a multi-tier Claude (Sonnet → Opus) dispatcher, cutting attorney review from hours to minutes.",
+    ],
+  },
+  {
     role: "Software Engineer Intern",
     company: "University at Buffalo",
     location: "Buffalo, NY",
