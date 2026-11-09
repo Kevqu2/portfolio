@@ -4,6 +4,7 @@ import { X, ChevronLeft, ChevronRight, Github, ExternalLink } from "lucide-react
 import {
   SiPython, SiOpencv, SiTypescript, SiReact, SiNextdotjs, SiFastapi,
   SiPytorch, SiMapbox, SiTwilio, SiOpenai, SiApple,
+  SiGooglechrome, SiClaude, SiElevenlabs, SiPostgresql,
 } from "react-icons/si";
 import { useInView } from "@/hooks/useInView";
 
@@ -21,11 +22,34 @@ const TECH_ICON: Record<string, IconCmp> = {
   "Mapbox": SiMapbox,
   "Twilio": SiTwilio,
   "OpenAI": SiOpenai,
+  "Chrome Extension": SiGooglechrome,
+  "Claude": SiClaude,
+  "ElevenLabs": SiElevenlabs,
+  "PostgreSQL": SiPostgresql,
 };
 
 const FALLBACK_BG = "radial-gradient(120% 120% at 0% 0%, rgba(226,85,46,0.18), rgba(226,85,46,0.03) 50%, transparent 72%), linear-gradient(160deg, #1a1512, #0c0a09)";
 
-const projects = [
+type Project = {
+  name: string;
+  description: string;
+  stack: string[];
+  github: string;
+  live: string;
+  images: string[];
+  award?: string;
+};
+
+const projects: Project[] = [
+  {
+    name: "yooNova",
+    description: "Won Most Over-Engineered Hack at UB Hacking with an AI tutor that follows live lectures.",
+    stack: ["Chrome Extension", "React", "Python", "Claude", "ElevenLabs", "PostgreSQL"],
+    github: "https://github.com/amaanomo/yooprofess",
+    live: "https://devpost.com/software/yoonova",
+    images: ["/projects/yoonova-1.jpeg"],
+    award: "Most Over-Engineered Hack — UB Hacking",
+  },
   {
     name: "Lock-In",
     description: "Real-time habit detection tracking anxiety-related hand-to-face behaviors via computer vision.",
@@ -74,7 +98,7 @@ function ProjectCard({
   index,
   onOpen,
 }: {
-  project: (typeof projects)[0];
+  project: Project;
   index: number;
   onOpen: (images: string[], start: number) => void;
 }) {
@@ -118,6 +142,27 @@ function ProjectCard({
         />
       ) : (
         <div style={{ position: "absolute", inset: 0, background: FALLBACK_BG }} />
+      )}
+
+      {project.award && (
+        <div
+          aria-label={`Winner: ${project.award}`}
+          style={{ position: "absolute", top: 0, left: 0, width: "110px", height: "110px", overflow: "hidden", zIndex: 2, pointerEvents: "none" }}
+        >
+          <span
+            title={project.award}
+            style={{
+              position: "absolute", top: "24px", left: "-34px", width: "150px",
+              transform: "rotate(-45deg)", textAlign: "center",
+              background: "#f5c04a", color: "#3a2a05",
+              fontSize: "11px", fontWeight: 800, letterSpacing: "0.14em",
+              padding: "5px 0", boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
+              pointerEvents: "auto",
+            }}
+          >
+            WINNER
+          </span>
+        </div>
       )}
 
       {/* legibility overlay */}
